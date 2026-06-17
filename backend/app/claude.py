@@ -2,10 +2,17 @@ import os
 
 import anthropic
 
-_client = anthropic.AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+_api_key = os.getenv("ANTHROPIC_API_KEY", "")
+_client = anthropic.AsyncAnthropic(api_key=_api_key) if _api_key and _api_key != "placeholder" else None
 
 
 async def generate_match_explanation(restaurant, partner_names: list[str]) -> str:
+    if _client is None:
+        return (
+            f"{restaurant.name} is a great pick — you both said yes to {restaurant.cuisine} "
+            f"in {restaurant.neighborhood}, and at {'$' * restaurant.price_range} it fits the night perfectly."
+        )
+
     names = " and ".join(partner_names)
     dollars = "$" * restaurant.price_range
 
@@ -19,7 +26,7 @@ async def generate_match_explanation(restaurant, partner_names: list[str]) -> st
     )
 
     message = await _client.messages.create(
-        model="claude-sonnet-4-6",
+        model="claude-opus-4-7",
         max_tokens=150,
         messages=[{"role": "user", "content": prompt}],
     )

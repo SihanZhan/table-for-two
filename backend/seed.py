@@ -1,5 +1,7 @@
 """Run once to create tables and insert seed restaurants: python seed.py"""
 import asyncio
+from dotenv import find_dotenv, load_dotenv
+load_dotenv(find_dotenv())
 
 from sqlalchemy import func, select
 
