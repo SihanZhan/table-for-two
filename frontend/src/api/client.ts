@@ -53,8 +53,8 @@ async function get<T>(path: string): Promise<T> {
 }
 
 export const api = {
-  createSession: (creator_name: string) =>
-    post<SessionResponse>('/sessions', { creator_name }),
+  createSession: (creator_name: string, location: string) =>
+    post<SessionResponse>('/sessions', { creator_name, location }),
 
   joinSession: (join_code: string, name: string) =>
     post<ParticipantResponse>('/sessions/join', { join_code, name }),

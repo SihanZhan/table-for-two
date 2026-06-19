@@ -7,6 +7,7 @@ from .models import SessionStatus
 
 class SessionCreate(BaseModel):
     creator_name: str
+    location: str
 
 
 class SessionResponse(BaseModel):

@@ -25,9 +25,11 @@ class Session(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     join_code: Mapped[str] = mapped_column(String(10), unique=True, index=True)
     status: Mapped[SessionStatus] = mapped_column(default=SessionStatus.waiting)
+    location: Mapped[str] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     participants: Mapped[list["Participant"]] = relationship(back_populates="session")
+    restaurants: Mapped[list["Restaurant"]] = relationship(back_populates="session")
 
 
 class Participant(Base):
@@ -46,14 +48,17 @@ class Restaurant(Base):
     __tablename__ = "restaurants"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id"))
     name: Mapped[str] = mapped_column(String(200))
-    cuisine: Mapped[str] = mapped_column(String(50))
+    cuisine: Mapped[str] = mapped_column(String(100))
     price_range: Mapped[int] = mapped_column(Integer)   # 1–4 ($–$$$$)
     rating: Mapped[float] = mapped_column(Float)         # 0–5
     neighborhood: Mapped[str] = mapped_column(String(100))
-    description: Mapped[str] = mapped_column(String(500))
+    description: Mapped[str] = mapped_column(String(1000), default="")
     image_url: Mapped[str | None] = mapped_column(String(500))
+    fsq_id: Mapped[str | None] = mapped_column(String(100))
 
+    session: Mapped["Session"] = relationship(back_populates="restaurants")
     swipes: Mapped[list["Swipe"]] = relationship(back_populates="restaurant")
 
 

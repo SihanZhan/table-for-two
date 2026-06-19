@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Restaurant } from '../api/client'
 
 interface Props {
@@ -7,65 +8,123 @@ interface Props {
   disabled?: boolean
 }
 
+const BRAND = '#E8472A'
+
 export default function RestaurantCard({ restaurant, onLike, onPass, disabled }: Props) {
+  const [dismissDir, setDismissDir] = useState<'left' | 'right' | null>(null)
   const stars = Math.round(restaurant.rating)
 
+  async function fire(liked: boolean) {
+    if (disabled || dismissDir) return
+    setDismissDir(liked ? 'right' : 'left')
+    await new Promise(r => setTimeout(r, 280))
+    liked ? onLike() : onPass()
+  }
+
+  const flyX = dismissDir === 'right' ? '115%' : dismissDir === 'left' ? '-115%' : '0'
+  const flyRot = dismissDir === 'right' ? '18deg' : dismissDir === 'left' ? '-18deg' : '0deg'
+
   return (
-    <div style={s.card}>
-      {restaurant.image_url ? (
-        <img src={restaurant.image_url} alt={restaurant.name} style={s.img} />
-      ) : (
-        <div style={s.placeholder}>{restaurant.cuisine[0]}</div>
-      )}
-      <div style={s.body}>
-        <div style={s.row}>
-          <h2 style={s.name}>{restaurant.name}</h2>
-          <span style={s.price}>{'$'.repeat(restaurant.price_range)}</span>
+    <div style={{
+      width: '100%',
+      borderRadius: 24,
+      overflow: 'hidden',
+      background: '#fff',
+      boxShadow: '0 8px 40px rgba(0,0,0,0.13)',
+      transform: `translateX(${flyX}) rotate(${flyRot})`,
+      transition: dismissDir ? 'transform 0.28s cubic-bezier(0.4,0,0.2,1)' : 'none',
+      userSelect: 'none',
+    }}>
+
+      {/* Photo */}
+      <div style={{ position: 'relative', height: 280 }}>
+        {restaurant.image_url ? (
+          <img
+            src={restaurant.image_url}
+            alt={restaurant.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        ) : (
+          <div style={{
+            width: '100%', height: '100%', background: '#F0EDE8',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '5rem', color: '#D1CBC3',
+          }}>
+            {restaurant.cuisine[0]}
+          </div>
+        )}
+
+        {/* gradient overlay — name + price on top of photo */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)',
+          display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+          padding: '1rem 1.25rem',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>
+              {restaurant.name}
+            </h2>
+            <span style={{
+              background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(6px)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: 8, padding: '2px 8px',
+              fontSize: '0.8rem', fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', marginLeft: 8,
+            }}>
+              {'$'.repeat(restaurant.price_range)}
+            </span>
+          </div>
+          <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', fontWeight: 500 }}>
+            {restaurant.cuisine} · {restaurant.neighborhood}
+          </p>
         </div>
-        <p style={s.meta}>{restaurant.cuisine} · {restaurant.neighborhood}</p>
-        <p style={s.stars}>
-          {'★'.repeat(stars)}{'☆'.repeat(5 - stars)}
-          <span style={s.ratingNum}>{restaurant.rating.toFixed(1)}</span>
-        </p>
-        <p style={s.desc}>{restaurant.description}</p>
       </div>
-      <div style={s.actions}>
-        <button style={s.passBtn} onClick={onPass} disabled={disabled}>Pass</button>
-        <button style={s.likeBtn} onClick={onLike} disabled={disabled}>Like</button>
+
+      {/* Content */}
+      <div style={{ padding: '1rem 1.25rem 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.5rem' }}>
+          <span style={{ color: '#F4A300', fontSize: '0.9rem', letterSpacing: 1 }}>
+            {'★'.repeat(stars)}{'☆'.repeat(5 - stars)}
+          </span>
+          <span style={{ fontSize: '0.82rem', color: '#888', fontWeight: 500 }}>
+            {restaurant.rating.toFixed(1)}
+          </span>
+        </div>
+        <p style={{
+          margin: 0, fontSize: '0.9rem', color: '#4B4B4B', lineHeight: 1.55,
+          display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        }}>
+          {restaurant.description}
+        </p>
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: '0.65rem', padding: '1rem 1.25rem' }}>
+        <button
+          onClick={() => fire(false)}
+          disabled={!!disabled || !!dismissDir}
+          style={{
+            flex: 1, padding: '0.8rem', border: '2px solid #E8E3DC',
+            borderRadius: 14, background: '#fff', fontSize: '1rem',
+            fontWeight: 600, cursor: 'pointer', color: '#888',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          }}
+        >
+          <span style={{ fontSize: '1.1rem' }}>✕</span> Pass
+        </button>
+        <button
+          onClick={() => fire(true)}
+          disabled={!!disabled || !!dismissDir}
+          style={{
+            flex: 1, padding: '0.8rem', border: 'none',
+            borderRadius: 14, background: BRAND,
+            fontSize: '1rem', fontWeight: 600, cursor: 'pointer', color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          }}
+        >
+          <span style={{ fontSize: '1.1rem' }}>♥</span> Like
+        </button>
       </div>
     </div>
   )
-}
-
-const s: Record<string, React.CSSProperties> = {
-  card: {
-    background: '#fff', borderRadius: '1.25rem',
-    boxShadow: '0 4px 24px rgba(0,0,0,0.1)',
-    overflow: 'hidden', width: '100%', maxWidth: '400px',
-  },
-  img: { width: '100%', height: '240px', objectFit: 'cover', display: 'block' },
-  placeholder: {
-    width: '100%', height: '240px', background: '#f0ede8',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '5rem', color: '#ccc',
-  },
-  body: { padding: '1rem 1.25rem 0' },
-  row: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' },
-  name: { margin: 0, fontSize: '1.3rem', fontWeight: 700, color: '#1a1a1a' },
-  price: { color: '#e85d04', fontWeight: 700 },
-  meta: { color: '#888', margin: '0.2rem 0', fontSize: '0.85rem' },
-  stars: { color: '#f4a300', margin: '0 0 0.5rem' },
-  ratingNum: { color: '#666', fontSize: '0.8rem', marginLeft: '0.4rem' },
-  desc: { color: '#444', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '0.5rem' },
-  actions: { display: 'flex', gap: '0.75rem', padding: '1rem 1.25rem' },
-  passBtn: {
-    flex: 1, padding: '0.85rem', border: '2px solid #e0e0e0',
-    borderRadius: '0.75rem', background: '#fff', fontSize: '1rem',
-    fontWeight: 600, cursor: 'pointer', color: '#666',
-  },
-  likeBtn: {
-    flex: 1, padding: '0.85rem', border: 'none',
-    borderRadius: '0.75rem', background: '#e85d04',
-    color: '#fff', fontSize: '1rem', fontWeight: 600, cursor: 'pointer',
-  },
 }

@@ -16,7 +16,9 @@ async def get_restaurants(participant_id: int, db: AsyncSession = Depends(get_db
     if not participant:
         raise HTTPException(404, "Participant not found")
 
-    all_restaurants = list(await db.scalars(select(Restaurant)))
+    all_restaurants = list(await db.scalars(
+        select(Restaurant).where(Restaurant.session_id == participant.session_id)
+    ))
 
     swiped_ids = set(
         await db.scalars(

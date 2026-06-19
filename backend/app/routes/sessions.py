@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
+from ..foursquare import fetch_restaurants
 from ..models import Participant, Session, SessionStatus
 from ..schemas import JoinRequest, ParticipantResponse, SessionCreate, SessionResponse
 
@@ -26,12 +27,23 @@ async def create_session(body: SessionCreate, db: AsyncSession = Depends(get_db)
     else:
         raise HTTPException(500, "Could not generate a unique join code")
 
-    session = Session(join_code=code, status=SessionStatus.waiting)
+    session = Session(join_code=code, status=SessionStatus.waiting, location=body.location)
     db.add(session)
     await db.flush()
 
     participant = Participant(session_id=session.id, name=body.creator_name)
     db.add(participant)
+    await db.flush()
+
+    try:
+        restaurants = await fetch_restaurants(body.location, session.id)
+    except Exception as exc:
+        raise HTTPException(503, f"Could not fetch restaurants: {exc}")
+
+    if not restaurants:
+        raise HTTPException(404, f"No restaurants found near '{body.location}'. Try a different city.")
+
+    db.add_all(restaurants)
     await db.commit()
     await db.refresh(session)
     await db.refresh(participant)
