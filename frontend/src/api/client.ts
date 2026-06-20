@@ -5,6 +5,7 @@ export interface SessionResponse {
   join_code: string
   status: string
   participant_id: number
+  location: string
 }
 
 export interface ParticipantResponse {
@@ -55,6 +56,9 @@ async function get<T>(path: string): Promise<T> {
 export const api = {
   createSession: (creator_name: string, location: string) =>
     post<SessionResponse>('/sessions', { creator_name, location }),
+
+  getSessionInfo: (join_code: string) =>
+    get<{ location: string; status: string }>(`/sessions/info/${join_code}`),
 
   joinSession: (join_code: string, name: string) =>
     post<ParticipantResponse>('/sessions/join', { join_code, name }),

@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
+from ..limiter import limiter
 from ..models import Participant, Restaurant, Swipe
 from ..recommender import rank_restaurants
 from ..schemas import RestaurantResponse, SwipeRequest
@@ -11,7 +12,8 @@ router = APIRouter(prefix="/swipes", tags=["swipes"])
 
 
 @router.get("/restaurants/{participant_id}", response_model=list[RestaurantResponse])
-async def get_restaurants(participant_id: int, db: AsyncSession = Depends(get_db)):
+@limiter.limit("30/minute")
+async def get_restaurants(request: Request, participant_id: int, db: AsyncSession = Depends(get_db)):
     participant = await db.get(Participant, participant_id)
     if not participant:
         raise HTTPException(404, "Participant not found")
@@ -41,11 +43,19 @@ async def get_restaurants(participant_id: int, db: AsyncSession = Depends(get_db
 
 
 @router.post("")
-async def record_swipe(body: SwipeRequest, db: AsyncSession = Depends(get_db)):
-    if not await db.get(Participant, body.participant_id):
+@limiter.limit("120/minute")
+async def record_swipe(request: Request, body: SwipeRequest, db: AsyncSession = Depends(get_db)):
+    participant = await db.get(Participant, body.participant_id)
+    if not participant:
         raise HTTPException(404, "Participant not found")
-    if not await db.get(Restaurant, body.restaurant_id):
+
+    restaurant = await db.get(Restaurant, body.restaurant_id)
+    if not restaurant:
         raise HTTPException(404, "Restaurant not found")
+
+    # Ensure the restaurant belongs to the participant's session
+    if restaurant.session_id != participant.session_id:
+        raise HTTPException(403, "Restaurant does not belong to this session")
 
     existing = await db.scalar(
         select(Swipe).where(
@@ -67,7 +77,8 @@ async def record_swipe(body: SwipeRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/finish/{participant_id}")
-async def finish_swiping(participant_id: int, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def finish_swiping(request: Request, participant_id: int, db: AsyncSession = Depends(get_db)):
     participant = await db.get(Participant, participant_id)
     if not participant:
         raise HTTPException(404, "Participant not found")

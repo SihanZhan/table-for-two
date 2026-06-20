@@ -1,6 +1,4 @@
 import enum
-import random
-import string
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
@@ -13,10 +11,6 @@ class SessionStatus(str, enum.Enum):
     waiting = "waiting"
     active = "active"
     completed = "completed"
-
-
-def _generate_code(length: int = 6) -> str:
-    return "".join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
 
 class Session(Base):
@@ -36,7 +30,7 @@ class Participant(Base):
     __tablename__ = "participants"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id"))
+    session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id"), index=True)
     name: Mapped[str] = mapped_column(String(100))
     finished: Mapped[bool] = mapped_column(Boolean, default=False)
 
@@ -48,11 +42,11 @@ class Restaurant(Base):
     __tablename__ = "restaurants"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id"))
+    session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id"), index=True)
     name: Mapped[str] = mapped_column(String(200))
     cuisine: Mapped[str] = mapped_column(String(100))
-    price_range: Mapped[int] = mapped_column(Integer)   # 1–4 ($–$$$$)
-    rating: Mapped[float] = mapped_column(Float)         # 0–5
+    price_range: Mapped[int] = mapped_column(Integer)
+    rating: Mapped[float] = mapped_column(Float)
     neighborhood: Mapped[str] = mapped_column(String(100))
     description: Mapped[str] = mapped_column(String(1000), default="")
     image_url: Mapped[str | None] = mapped_column(String(500))
@@ -67,8 +61,8 @@ class Swipe(Base):
     __table_args__ = (UniqueConstraint("participant_id", "restaurant_id"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    participant_id: Mapped[int] = mapped_column(ForeignKey("participants.id"))
-    restaurant_id: Mapped[int] = mapped_column(ForeignKey("restaurants.id"))
+    participant_id: Mapped[int] = mapped_column(ForeignKey("participants.id"), index=True)
+    restaurant_id: Mapped[int] = mapped_column(ForeignKey("restaurants.id"), index=True)
     liked: Mapped[bool] = mapped_column(Boolean)
 
     participant: Mapped["Participant"] = relationship(back_populates="swipes")

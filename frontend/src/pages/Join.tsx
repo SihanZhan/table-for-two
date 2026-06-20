@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import QRCode from '../components/QRCode'
 
@@ -9,6 +9,7 @@ interface CreatorState {
   sessionId: number
   joinCode: string
   participantId: number
+  location: string
   isCreator: boolean
 }
 
@@ -17,10 +18,26 @@ export default function Join() {
   const creator = location.state as CreatorState | null
   const navigate = useNavigate()
 
-  const [code, setCode] = useState(creator?.joinCode ?? '')
+  const [searchParams] = useSearchParams()
+  const [code, setCode] = useState(searchParams.get('code')?.toUpperCase() ?? creator?.joinCode ?? '')
   const [name, setName] = useState('')
+  const [sessionLocation, setSessionLocation] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  async function handleCodeChange(val: string) {
+    const upper = val.toUpperCase()
+    setCode(upper)
+    setSessionLocation('')
+    if (upper.length === 6) {
+      try {
+        const info = await api.getSessionInfo(upper)
+        setSessionLocation(info.location)
+      } catch {
+        // code not found yet — ignore
+      }
+    }
+  }
 
   async function handleJoin() {
     if (!code.trim() || !name.trim()) return
@@ -43,9 +60,10 @@ export default function Join() {
           <div style={s.iconRow}>🔗</div>
           <h2 style={s.heading}>Share with your partner</h2>
           <p style={s.sub}>Scan the QR code or share the code below.</p>
+          <div style={s.locationBadge}>📍 {creator.location}</div>
 
           <div style={s.qrWrap}>
-            <QRCode value={creator.joinCode} />
+            <QRCode value={`${window.location.origin}/join?code=${creator.joinCode}`} />
           </div>
 
           <div style={s.codeRow}>
@@ -82,10 +100,14 @@ export default function Join() {
             style={{ ...s.input, textTransform: 'uppercase', letterSpacing: '0.25rem', fontWeight: 700 }}
             placeholder="SESSION CODE"
             value={code}
-            onChange={e => setCode(e.target.value.toUpperCase())}
+            onChange={e => handleCodeChange(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleJoin()}
           />
         </div>
+
+        {sessionLocation && (
+          <div style={s.locationBadge}>📍 Restaurants near {sessionLocation}</div>
+        )}
 
         {error && <p style={s.error}>{error}</p>}
 
@@ -140,4 +162,9 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: '0.85rem', cursor: 'pointer', fontWeight: 500,
   },
   error: { color: '#DC2626', margin: 0, fontSize: '0.85rem' },
+  locationBadge: {
+    background: '#FFF0ED', color: BRAND,
+    fontSize: '0.8rem', fontWeight: 600,
+    padding: '6px 12px', borderRadius: 999,
+  },
 }

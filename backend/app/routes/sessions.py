@@ -1,24 +1,29 @@
-import random
+import secrets
 import string
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
+from ..fallback import get_fallback_restaurants
 from ..foursquare import fetch_restaurants
+from ..limiter import limiter
 from ..models import Participant, Session, SessionStatus
 from ..schemas import JoinRequest, ParticipantResponse, SessionCreate, SessionResponse
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
+_ALPHABET = string.ascii_uppercase + string.digits
+
 
 def _make_code(length: int = 6) -> str:
-    return "".join(random.choices(string.ascii_uppercase + string.digits, k=length))
+    return "".join(secrets.choice(_ALPHABET) for _ in range(length))
 
 
 @router.post("", response_model=SessionResponse)
-async def create_session(body: SessionCreate, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def create_session(request: Request, body: SessionCreate, db: AsyncSession = Depends(get_db)):
     for _ in range(10):
         code = _make_code()
         existing = await db.scalar(select(Session).where(Session.join_code == code))
@@ -37,11 +42,10 @@ async def create_session(body: SessionCreate, db: AsyncSession = Depends(get_db)
 
     try:
         restaurants = await fetch_restaurants(body.location, session.id)
-    except Exception as exc:
-        raise HTTPException(503, f"Could not fetch restaurants: {exc}")
-
-    if not restaurants:
-        raise HTTPException(404, f"No restaurants found near '{body.location}'. Try a different city.")
+        if not restaurants:
+            restaurants = get_fallback_restaurants(session.id)
+    except Exception:
+        restaurants = get_fallback_restaurants(session.id)
 
     db.add_all(restaurants)
     await db.commit()
@@ -53,11 +57,24 @@ async def create_session(body: SessionCreate, db: AsyncSession = Depends(get_db)
         join_code=session.join_code,
         status=session.status,
         participant_id=participant.id,
+        location=session.location,
     )
 
 
+@router.get("/info/{join_code}")
+@limiter.limit("30/minute")
+async def session_info(request: Request, join_code: str, db: AsyncSession = Depends(get_db)):
+    session = await db.scalar(
+        select(Session).where(Session.join_code == join_code.upper())
+    )
+    if not session:
+        raise HTTPException(404, "Session not found")
+    return {"location": session.location, "status": session.status}
+
+
 @router.post("/join", response_model=ParticipantResponse)
-async def join_session(body: JoinRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("15/minute")
+async def join_session(request: Request, body: JoinRequest, db: AsyncSession = Depends(get_db)):
     session = await db.scalar(
         select(Session).where(Session.join_code == body.join_code.upper())
     )

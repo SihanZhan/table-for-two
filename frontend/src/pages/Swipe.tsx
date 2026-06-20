@@ -4,6 +4,7 @@ import { api, Restaurant } from '../api/client'
 import RestaurantCard from '../components/RestaurantCard'
 
 const STACK_DEPTH = 3
+const BRAND = '#E8472A'
 
 export default function Swipe() {
   const { participantId } = useParams<{ participantId: string }>()
@@ -14,33 +15,51 @@ export default function Swipe() {
   const [index, setIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (!participantId) return
-    api.getRestaurants(Number(participantId)).then(r => {
-      setRestaurants(r)
-      setLoading(false)
-    })
+    api.getRestaurants(Number(participantId))
+      .then(r => setRestaurants(r))
+      .catch(err => setError(err instanceof Error ? err.message : 'Failed to load restaurants'))
+      .finally(() => setLoading(false))
   }, [participantId])
 
   async function handleSwipe(liked: boolean) {
     if (busy) return
     setBusy(true)
-    // card animation plays inside RestaurantCard (280ms), then this fires
-    await api.recordSwipe(Number(participantId), restaurants[index].id, liked)
-    if (index + 1 >= restaurants.length) {
-      await api.finishSwiping(Number(participantId))
-      navigate(`/results/${sessionId}`)
-    } else {
-      setIndex(i => i + 1)
+    setError('')
+    try {
+      await api.recordSwipe(Number(participantId), restaurants[index].id, liked)
+      if (index + 1 >= restaurants.length) {
+        await api.finishSwiping(Number(participantId))
+        navigate(`/results/${sessionId}`)
+      } else {
+        setIndex(i => i + 1)
+        setBusy(false)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong — try again')
       setBusy(false)
     }
   }
 
   if (loading) return <div style={s.center}>Loading restaurants…</div>
+
+  if (error && restaurants.length === 0) {
+    return (
+      <div style={s.center}>
+        <div style={{ textAlign: 'center', maxWidth: 300 }}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>⚠️</div>
+          <p style={{ color: '#DC2626', fontWeight: 600, margin: '0 0 1rem' }}>{error}</p>
+          <button style={s.retryBtn} onClick={() => window.location.reload()}>Retry</button>
+        </div>
+      </div>
+    )
+  }
+
   if (!restaurants.length) return <div style={s.center}>No restaurants found.</div>
 
-  // Visible stack: [back … front], rendered back-first so front paints on top
   const stackOffsets = Array.from(
     { length: Math.min(STACK_DEPTH, restaurants.length - index) },
     (_, i) => i,
@@ -53,7 +72,6 @@ export default function Swipe() {
         <span style={s.progress}>{index + 1} / {restaurants.length}</span>
       </div>
 
-      {/* Card stack */}
       <div style={{ position: 'relative', width: '100%', maxWidth: 400, height: 560 }}>
         {stackOffsets.map(offset => {
           const scale = 1 - offset * 0.04
@@ -89,6 +107,12 @@ export default function Swipe() {
         })}
       </div>
 
+      {error && (
+        <p style={{ color: '#DC2626', fontSize: '0.85rem', marginTop: '0.75rem', fontWeight: 500 }}>
+          {error}
+        </p>
+      )}
+
       <p style={s.hint}>Swipe or tap to decide</p>
     </div>
   )
@@ -111,5 +135,10 @@ const s: Record<string, React.CSSProperties> = {
   center: {
     minHeight: '100vh', display: 'flex',
     alignItems: 'center', justifyContent: 'center', color: '#9CA3AF',
+  },
+  retryBtn: {
+    background: BRAND, color: '#fff', border: 'none',
+    borderRadius: 12, padding: '0.75rem 2rem',
+    fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer',
   },
 }

@@ -22,6 +22,7 @@ export default function Home() {
           sessionId: session.id,
           joinCode: session.join_code,
           participantId: session.participant_id,
+          location: session.location,
           isCreator: true,
         },
       })

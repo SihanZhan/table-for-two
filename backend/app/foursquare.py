@@ -23,6 +23,8 @@ async def fetch_restaurants(location: str, session_id: int, limit: int = 20) -> 
 
     async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.get(_FSQ_URL, headers=headers, params=params)
+        if resp.status_code == 401:
+            raise RuntimeError("Foursquare API key is invalid. Get a v3 key from developer.foursquare.com")
         resp.raise_for_status()
 
     results = resp.json().get("results", [])
