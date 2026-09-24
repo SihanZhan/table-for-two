@@ -70,5 +70,23 @@ _DATA = [
 ]
 
 
-def get_fallback_restaurants(session_id: int) -> list[Restaurant]:
-    return [Restaurant(session_id=session_id, fsq_id=None, **d) for d in _DATA]
+def get_fallback_restaurants(
+    session_id: int,
+    cuisine: str | None = None,
+    min_rating: float | None = None,
+    max_price: int | None = None,
+) -> list[Restaurant]:
+    data = _DATA
+    if cuisine:
+        data = [d for d in data if d["cuisine"].lower() == cuisine.lower()]
+    if min_rating is not None:
+        data = [d for d in data if d["rating"] >= min_rating]
+    if max_price is not None:
+        data = [d for d in data if d["price_range"] <= max_price]
+
+    # Filters that eliminate the whole fallback deck would leave the swipe UI
+    # empty - better to show unfiltered picks than nothing at all.
+    if not data:
+        data = _DATA
+
+    return [Restaurant(session_id=session_id, fsq_id=None, **d) for d in data]

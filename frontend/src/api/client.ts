@@ -1,4 +1,6 @@
-const BASE = '/api'
+// In dev, requests go through Vite's proxy to localhost:8000 (see vite.config.ts).
+// In prod, set VITE_API_BASE to the deployed backend's URL (e.g. Render).
+const BASE = import.meta.env.VITE_API_BASE || '/api'
 
 export interface SessionResponse {
   id: number
@@ -6,6 +8,13 @@ export interface SessionResponse {
   status: string
   participant_id: number
   location: string
+}
+
+export interface SessionFilters {
+  cuisine?: string
+  min_rating?: number
+  max_price?: number
+  radius?: number
 }
 
 export interface ParticipantResponse {
@@ -54,8 +63,8 @@ async function get<T>(path: string): Promise<T> {
 }
 
 export const api = {
-  createSession: (creator_name: string, location: string) =>
-    post<SessionResponse>('/sessions', { creator_name, location }),
+  createSession: (creator_name: string, location: string, filters?: SessionFilters) =>
+    post<SessionResponse>('/sessions', { creator_name, location, ...filters }),
 
   getSessionInfo: (join_code: string) =>
     get<{ location: string; status: string }>(`/sessions/info/${join_code}`),

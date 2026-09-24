@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,13 +49,19 @@ async def get_matches(request: Request, session_id: int, db: AsyncSession = Depe
         await db.scalars(select(Restaurant).where(Restaurant.id.in_(overlap_ids)))
     )
 
-    names = [p.name for p in participants]
-    matches = []
-    for r in restaurants:
-        explanation = await generate_match_explanation(r, names)
-        matches.append(MatchResponse(
-            restaurant=RestaurantResponse.model_validate(r),
-            explanation=explanation,
-        ))
+    # Explanations are cached on the Restaurant row, so a repeated poll only
+    # pays for the Claude call once per restaurant instead of on every request.
+    uncached = [r for r in restaurants if not r.explanation]
+    if uncached:
+        names = [p.name for p in participants]
+        generated = await asyncio.gather(*(generate_match_explanation(r, names) for r in uncached))
+        for r, explanation in zip(uncached, generated):
+            r.explanation = explanation
+        await db.commit()
+
+    matches = [
+        MatchResponse(restaurant=RestaurantResponse.model_validate(r), explanation=r.explanation)
+        for r in restaurants
+    ]
 
     return MatchesResponse(session_id=session_id, both_finished=both_finished, matches=matches)

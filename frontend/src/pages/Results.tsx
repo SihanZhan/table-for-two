@@ -71,7 +71,7 @@ export default function Results() {
         <h1 style={s.title}>You both said yes!</h1>
         <p style={s.sub}>
           {matches.length === 1
-            ? 'One spot you're both into.'
+            ? `One spot you're both into.`
             : `${matches.length} places you're both into.`}
         </p>
       </div>

@@ -51,6 +51,7 @@ class Restaurant(Base):
     description: Mapped[str] = mapped_column(String(1000), default="")
     image_url: Mapped[str | None] = mapped_column(String(500))
     fsq_id: Mapped[str | None] = mapped_column(String(100))
+    explanation: Mapped[str | None] = mapped_column(String(1000))
 
     session: Mapped["Session"] = relationship(back_populates="restaurants")
     swipes: Mapped[list["Swipe"]] = relationship(back_populates="restaurant")

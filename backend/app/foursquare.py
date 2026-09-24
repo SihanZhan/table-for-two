@@ -7,19 +7,39 @@ from .models import Restaurant
 _FSQ_URL = "https://api.foursquare.com/v3/places/search"
 
 
-async def fetch_restaurants(location: str, session_id: int, limit: int = 20) -> list[Restaurant]:
+async def fetch_restaurants(
+    location: str,
+    session_id: int,
+    limit: int = 20,
+    ll: tuple[float, float] | None = None,
+    cuisine: str | None = None,
+    min_rating: float | None = None,
+    max_price: int | None = None,
+    radius: int | None = None,
+) -> list[Restaurant]:
     api_key = os.getenv("FOURSQUARE_API_KEY", "")
     if not api_key:
         raise RuntimeError("FOURSQUARE_API_KEY is not set")
 
     headers = {"Authorization": api_key, "Accept": "application/json"}
     params = {
-        "near": location,
         "categories": "13000",  # Food & Dining
         "limit": limit,
         "sort": "RATING",
         "fields": "fsq_id,name,categories,location,rating,price,photos,description",
     }
+    # Prefer geocoded coordinates over the free-text `near` - more precise and
+    # avoids Foursquare's ambiguous-location guesswork.
+    if ll:
+        params["ll"] = f"{ll[0]},{ll[1]}"
+    else:
+        params["near"] = location
+    if radius:
+        params["radius"] = radius
+    if cuisine:
+        params["query"] = cuisine
+    if max_price:
+        params["max_price"] = max_price
 
     async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.get(_FSQ_URL, headers=headers, params=params)
@@ -32,7 +52,7 @@ async def fetch_restaurants(location: str, session_id: int, limit: int = 20) -> 
 
     for place in results:
         cats = place.get("categories", [])
-        cuisine = cats[0]["name"] if cats else "Restaurant"
+        place_cuisine = cats[0]["name"] if cats else "Restaurant"
 
         loc = place.get("location", {})
         neighborhood = loc.get("neighborhood") or loc.get("locality") or loc.get("city") or ""
@@ -53,7 +73,7 @@ async def fetch_restaurants(location: str, session_id: int, limit: int = 20) -> 
         restaurants.append(Restaurant(
             session_id=session_id,
             name=place.get("name", ""),
-            cuisine=cuisine,
+            cuisine=place_cuisine,
             price_range=max(1, min(4, price)),
             rating=min(5.0, rating),
             neighborhood=str(neighborhood),
@@ -61,5 +81,9 @@ async def fetch_restaurants(location: str, session_id: int, limit: int = 20) -> 
             image_url=image_url,
             fsq_id=place.get("fsq_id"),
         ))
+
+    # Foursquare v3 has no server-side rating filter, so apply it client-side.
+    if min_rating is not None:
+        restaurants = [r for r in restaurants if r.rating >= min_rating]
 
     return restaurants

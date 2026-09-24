@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
 from ..limiter import limiter
-from ..models import Participant, Restaurant, Swipe
+from ..models import Participant, Restaurant, Session, SessionStatus, Swipe
 from ..recommender import rank_restaurants
 from ..schemas import RestaurantResponse, SwipeRequest
 
@@ -84,5 +84,12 @@ async def finish_swiping(request: Request, participant_id: int, db: AsyncSession
         raise HTTPException(404, "Participant not found")
 
     participant.finished = True
+
+    session = await db.get(Session, participant.session_id)
+    if session is not None:
+        participants = list(await db.scalars(select(Participant).where(Participant.session_id == session.id)))
+        if len(participants) >= 2 and all(p.finished for p in participants):
+            session.status = SessionStatus.completed
+
     await db.commit()
     return {"ok": True}

@@ -14,6 +14,10 @@ _CODE_RE = re.compile(r"^[A-Z0-9]{6}$")
 class SessionCreate(BaseModel):
     creator_name: str
     location: str
+    cuisine: str | None = None
+    min_rating: float | None = None
+    max_price: int | None = None
+    radius: int | None = None
 
     @field_validator("creator_name")
     @classmethod
@@ -29,6 +33,35 @@ class SessionCreate(BaseModel):
         v = v.strip()[:_LOC_MAX]
         if not v:
             raise ValueError("location cannot be empty")
+        return v
+
+    @field_validator("cuisine")
+    @classmethod
+    def clean_cuisine(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        v = v.strip()[:50]
+        return v or None
+
+    @field_validator("min_rating")
+    @classmethod
+    def check_min_rating(cls, v: float | None) -> float | None:
+        if v is not None and not (0 <= v <= 5):
+            raise ValueError("min_rating must be between 0 and 5")
+        return v
+
+    @field_validator("max_price")
+    @classmethod
+    def check_max_price(cls, v: int | None) -> int | None:
+        if v is not None and not (1 <= v <= 4):
+            raise ValueError("max_price must be between 1 and 4")
+        return v
+
+    @field_validator("radius")
+    @classmethod
+    def check_radius(cls, v: int | None) -> int | None:
+        if v is not None and not (100 <= v <= 100_000):
+            raise ValueError("radius must be between 100 and 100,000 meters")
         return v
 
 

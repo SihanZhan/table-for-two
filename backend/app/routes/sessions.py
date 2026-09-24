@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..database import get_db
 from ..fallback import get_fallback_restaurants
 from ..foursquare import fetch_restaurants
+from ..geocode import geocode_location
 from ..limiter import limiter
 from ..models import Participant, Session, SessionStatus
 from ..schemas import JoinRequest, ParticipantResponse, SessionCreate, SessionResponse
@@ -40,12 +41,16 @@ async def create_session(request: Request, body: SessionCreate, db: AsyncSession
     db.add(participant)
     await db.flush()
 
+    ll = await geocode_location(body.location)
+    filters = dict(cuisine=body.cuisine, min_rating=body.min_rating, max_price=body.max_price)
     try:
-        restaurants = await fetch_restaurants(body.location, session.id)
+        restaurants = await fetch_restaurants(
+            body.location, session.id, ll=ll, radius=body.radius, **filters
+        )
         if not restaurants:
-            restaurants = get_fallback_restaurants(session.id)
+            restaurants = get_fallback_restaurants(session.id, **filters)
     except Exception:
-        restaurants = get_fallback_restaurants(session.id)
+        restaurants = get_fallback_restaurants(session.id, **filters)
 
     db.add_all(restaurants)
     await db.commit()
@@ -75,8 +80,11 @@ async def session_info(request: Request, join_code: str, db: AsyncSession = Depe
 @router.post("/join", response_model=ParticipantResponse)
 @limiter.limit("15/minute")
 async def join_session(request: Request, body: JoinRequest, db: AsyncSession = Depends(get_db)):
+    # with_for_update() locks the session row for the rest of this transaction
+    # (on Postgres; SQLite has no row locking and no-ops this) so two concurrent
+    # joins can't both pass the status check below before either commits.
     session = await db.scalar(
-        select(Session).where(Session.join_code == body.join_code.upper())
+        select(Session).where(Session.join_code == body.join_code.upper()).with_for_update()
     )
     if not session:
         raise HTTPException(404, "Session not found")
