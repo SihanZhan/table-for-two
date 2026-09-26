@@ -1,3 +1,4 @@
+import asyncio
 import secrets
 import string
 
@@ -41,7 +42,13 @@ async def create_session(request: Request, body: SessionCreate, db: AsyncSession
     db.add(participant)
     await db.flush()
 
-    ll = await geocode_location(body.location)
+    # Geocoding is a precision nice-to-have, not a requirement - Foursquare accepts
+    # free-text `near` on its own. Bound it tightly so a slow/unreachable geocoder
+    # doesn't stack its full timeout on top of the Foursquare call's.
+    try:
+        ll = await asyncio.wait_for(geocode_location(body.location), timeout=3.0)
+    except TimeoutError:
+        ll = None
     filters = dict(cuisine=body.cuisine, min_rating=body.min_rating, max_price=body.max_price)
     try:
         restaurants = await fetch_restaurants(

@@ -9,7 +9,7 @@ async def geocode_location(location: str) -> tuple[float, float] | None:
     """Resolve free-text location to (lat, lon) via Photon. Best-effort: returns
     None on any failure so callers can fall back to Foursquare's free-text `near`."""
     try:
-        async with httpx.AsyncClient(timeout=10.0, headers=_HEADERS) as client:
+        async with httpx.AsyncClient(timeout=4.0, headers=_HEADERS) as client:
             resp = await client.get(_PHOTON_URL, params={"q": location, "limit": 1})
             resp.raise_for_status()
             features = resp.json().get("features", [])

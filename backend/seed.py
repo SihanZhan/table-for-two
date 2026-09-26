@@ -8,9 +8,10 @@ from sqlalchemy import func, select
 from app.database import AsyncSessionLocal, Base, engine
 from app.models import Restaurant
 
-# Unsplash source URLs — keyword-based, free, no API key required
-def _photo(keyword: str) -> str:
-    return f"https://source.unsplash.com/featured/800x600/?{keyword}"
+# source.unsplash.com (the old random-photo redirect API) was shut down by
+# Unsplash - Picsum is a stable placeholder service, no API key required.
+def _photo(seed: str) -> str:
+    return f"https://picsum.photos/seed/{seed.replace(',', '-')}/800/600"
 
 RESTAURANTS = [
     Restaurant(name="The Italian Table", cuisine="Italian", price_range=3, rating=4.6,

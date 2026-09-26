@@ -41,7 +41,7 @@ async def fetch_restaurants(
     if max_price:
         params["max_price"] = max_price
 
-    async with httpx.AsyncClient(timeout=15.0) as client:
+    async with httpx.AsyncClient(timeout=8.0) as client:
         resp = await client.get(_FSQ_URL, headers=headers, params=params)
         if resp.status_code == 401:
             raise RuntimeError("Foursquare API key is invalid. Get a v3 key from developer.foursquare.com")

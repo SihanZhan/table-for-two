@@ -2,8 +2,11 @@
 from .models import Restaurant
 
 
-def _photo(keyword: str) -> str:
-    return f"https://source.unsplash.com/featured/800x600/?{keyword}"
+def _photo(seed: str) -> str:
+    # source.unsplash.com (the old random-photo redirect API) was shut down by
+    # Unsplash - Picsum is a stable placeholder service; seeding by name keeps
+    # each restaurant's photo consistent across reloads.
+    return f"https://picsum.photos/seed/{seed.replace(',', '-')}/800/600"
 
 
 _DATA = [

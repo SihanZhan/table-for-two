@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Restaurant } from '../api/client'
+import { HeartIcon, XIcon } from './icons'
 
 interface Props {
   restaurant: Restaurant
@@ -9,9 +10,15 @@ interface Props {
 }
 
 const BRAND = '#E8472A'
+const SWIPE_THRESHOLD = 110
+const ROTATION_DIVISOR = 18
 
 export default function RestaurantCard({ restaurant, onLike, onPass, disabled }: Props) {
   const [dismissDir, setDismissDir] = useState<'left' | 'right' | null>(null)
+  const [dragX, setDragX] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+  const draggingRef = useRef(false)
+  const startXRef = useRef(0)
   const stars = Math.round(restaurant.rating)
 
   async function fire(liked: boolean) {
@@ -21,20 +28,74 @@ export default function RestaurantCard({ restaurant, onLike, onPass, disabled }:
     liked ? onLike() : onPass()
   }
 
-  const flyX = dismissDir === 'right' ? '115%' : dismissDir === 'left' ? '-115%' : '0'
-  const flyRot = dismissDir === 'right' ? '18deg' : dismissDir === 'left' ? '-18deg' : '0deg'
+  function onPointerDown(e: React.PointerEvent) {
+    if (disabled || dismissDir) return
+    draggingRef.current = true
+    setIsDragging(true)
+    startXRef.current = e.clientX
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }
+
+  function onPointerMove(e: React.PointerEvent) {
+    if (!draggingRef.current) return
+    setDragX(e.clientX - startXRef.current)
+  }
+
+  function onPointerUp() {
+    if (!draggingRef.current) return
+    draggingRef.current = false
+    setIsDragging(false)
+    if (Math.abs(dragX) > SWIPE_THRESHOLD) {
+      fire(dragX > 0)
+    } else {
+      setDragX(0)
+    }
+  }
+
+  const flyX = dismissDir === 'right' ? '115%' : dismissDir === 'left' ? '-115%' : `${dragX}px`
+  const flyRot = dismissDir === 'right' ? '18deg' : dismissDir === 'left' ? '-18deg' : `${dragX / ROTATION_DIVISOR}deg`
+  const likeOpacity = dismissDir === 'right' ? 1 : Math.max(0, Math.min(1, dragX / SWIPE_THRESHOLD))
+  const nopeOpacity = dismissDir === 'left' ? 1 : Math.max(0, Math.min(1, -dragX / SWIPE_THRESHOLD))
 
   return (
-    <div style={{
-      width: '100%',
-      borderRadius: 24,
-      overflow: 'hidden',
-      background: '#fff',
-      boxShadow: '0 8px 40px rgba(0,0,0,0.13)',
-      transform: `translateX(${flyX}) rotate(${flyRot})`,
-      transition: dismissDir ? 'transform 0.28s cubic-bezier(0.4,0,0.2,1)' : 'none',
-      userSelect: 'none',
-    }}>
+    <div
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      style={{
+        width: '100%',
+        borderRadius: 24,
+        overflow: 'hidden',
+        background: '#fff',
+        boxShadow: '0 8px 40px rgba(0,0,0,0.13)',
+        transform: `translateX(${flyX}) rotate(${flyRot})`,
+        transition: isDragging ? 'none' : dismissDir ? 'transform 0.28s cubic-bezier(0.4,0,0.2,1)' : 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)',
+        userSelect: 'none',
+        touchAction: 'pan-y',
+        cursor: disabled || dismissDir ? 'default' : isDragging ? 'grabbing' : 'grab',
+        position: 'relative',
+      }}
+    >
+      {/* LIKE / NOPE drag stamps */}
+      <div style={{
+        position: 'absolute', top: 20, left: 20, zIndex: 2,
+        padding: '6px 14px', borderRadius: 8, border: `3px solid ${BRAND}`,
+        color: BRAND, fontWeight: 800, fontSize: '1.3rem', letterSpacing: '1px',
+        transform: 'rotate(-14deg)', opacity: likeOpacity, pointerEvents: 'none',
+        background: 'rgba(255,255,255,0.85)',
+      }}>
+        LIKE
+      </div>
+      <div style={{
+        position: 'absolute', top: 20, right: 20, zIndex: 2,
+        padding: '6px 14px', borderRadius: 8, border: '3px solid #9CA3AF',
+        color: '#6B7280', fontWeight: 800, fontSize: '1.3rem', letterSpacing: '1px',
+        transform: 'rotate(14deg)', opacity: nopeOpacity, pointerEvents: 'none',
+        background: 'rgba(255,255,255,0.85)',
+      }}>
+        NOPE
+      </div>
 
       {/* Photo */}
       <div style={{ position: 'relative', height: 280 }}>
@@ -42,6 +103,7 @@ export default function RestaurantCard({ restaurant, onLike, onPass, disabled }:
           <img
             src={restaurant.image_url}
             alt={restaurant.name}
+            draggable={false}
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
         ) : (
@@ -101,8 +163,10 @@ export default function RestaurantCard({ restaurant, onLike, onPass, disabled }:
       {/* Actions */}
       <div style={{ display: 'flex', gap: '0.65rem', padding: '1rem 1.25rem' }}>
         <button
+          className="icon-btn"
           onClick={() => fire(false)}
           disabled={!!disabled || !!dismissDir}
+          aria-label="Pass"
           style={{
             flex: 1, padding: '0.8rem', border: '2px solid #E8E3DC',
             borderRadius: 14, background: '#fff', fontSize: '1rem',
@@ -110,11 +174,13 @@ export default function RestaurantCard({ restaurant, onLike, onPass, disabled }:
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           }}
         >
-          <span style={{ fontSize: '1.1rem' }}>✕</span> Pass
+          <XIcon size={17} /> Pass
         </button>
         <button
+          className="btn-primary"
           onClick={() => fire(true)}
           disabled={!!disabled || !!dismissDir}
+          aria-label="Like"
           style={{
             flex: 1, padding: '0.8rem', border: 'none',
             borderRadius: 14, background: BRAND,
@@ -122,7 +188,7 @@ export default function RestaurantCard({ restaurant, onLike, onPass, disabled }:
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           }}
         >
-          <span style={{ fontSize: '1.1rem' }}>♥</span> Like
+          <HeartIcon size={17} /> Like
         </button>
       </div>
     </div>

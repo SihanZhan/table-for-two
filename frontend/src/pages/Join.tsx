@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import QRCode from '../components/QRCode'
+import { LinkIcon, PinIcon, WaveIcon } from '../components/icons'
 
 const BRAND = '#E8472A'
 
@@ -57,10 +58,10 @@ export default function Join() {
     return (
       <div style={s.page}>
         <div style={s.card}>
-          <div style={s.iconRow}>🔗</div>
+          <div style={s.iconRow}><LinkIcon size={28} style={{ color: BRAND }} /></div>
           <h2 style={s.heading}>Share with your partner</h2>
           <p style={s.sub}>Scan the QR code or share the code below.</p>
-          <div style={s.locationBadge}>📍 {creator.location}</div>
+          <div style={s.locationBadge}><PinIcon style={{ marginRight: 4, verticalAlign: -1 }} /> {creator.location}</div>
 
           <div style={s.qrWrap}>
             <QRCode value={`${window.location.origin}/join?code=${creator.joinCode}`} />
@@ -73,6 +74,7 @@ export default function Join() {
           </div>
 
           <button
+            className="btn-primary"
             style={s.btn}
             onClick={() => navigate(`/swipe/${creator.participantId}`, { state: { sessionId: creator.sessionId } })}
           >
@@ -86,7 +88,7 @@ export default function Join() {
   return (
     <div style={s.page}>
       <div style={s.card}>
-        <div style={s.iconRow}>👋</div>
+        <div style={s.iconRow}><WaveIcon size={28} style={{ color: BRAND }} /></div>
         <h2 style={s.heading}>Join a session</h2>
         <p style={s.sub}>Enter your name and the code your partner shared.</p>
 
@@ -106,12 +108,13 @@ export default function Join() {
         </div>
 
         {sessionLocation && (
-          <div style={s.locationBadge}>📍 Restaurants near {sessionLocation}</div>
+          <div style={s.locationBadge}><PinIcon style={{ marginRight: 4, verticalAlign: -1 }} /> Restaurants near {sessionLocation}</div>
         )}
 
         {error && <p style={s.error}>{error}</p>}
 
         <button
+          className="btn-primary"
           style={{ ...s.btn, opacity: !code.trim() || !name.trim() || loading ? 0.5 : 1 }}
           onClick={handleJoin}
           disabled={loading || !code.trim() || !name.trim()}
@@ -119,7 +122,7 @@ export default function Join() {
           {loading ? 'Joining…' : 'Join session →'}
         </button>
 
-        <button style={s.back} onClick={() => navigate('/')}>← Back</button>
+        <button className="btn-ghost" style={s.back} onClick={() => navigate('/')}>← Back</button>
       </div>
     </div>
   )

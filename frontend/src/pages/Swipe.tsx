@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, Restaurant } from '../api/client'
 import RestaurantCard from '../components/RestaurantCard'
+import Spinner from '../components/Spinner'
+import { AlertIcon } from '../components/icons'
 
 const STACK_DEPTH = 3
 const BRAND = '#E8472A'
@@ -44,15 +46,15 @@ export default function Swipe() {
     }
   }
 
-  if (loading) return <div style={s.center}>Loading restaurants…</div>
+  if (loading) return <div style={s.center}><Spinner /></div>
 
   if (error && restaurants.length === 0) {
     return (
       <div style={s.center}>
         <div style={{ textAlign: 'center', maxWidth: 300 }}>
-          <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>⚠️</div>
+          <AlertIcon size={32} style={{ color: '#DC2626', marginBottom: '0.75rem' }} />
           <p style={{ color: '#DC2626', fontWeight: 600, margin: '0 0 1rem' }}>{error}</p>
-          <button style={s.retryBtn} onClick={() => window.location.reload()}>Retry</button>
+          <button className="btn-primary" style={s.retryBtn} onClick={() => window.location.reload()}>Retry</button>
         </div>
       </div>
     )
@@ -84,7 +86,7 @@ export default function Swipe() {
               style={{
                 position: 'absolute', inset: 0,
                 transform: `scale(${scale}) translateY(-${translateY}px)`,
-                transition: 'transform 0.2s ease',
+                transition: 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1)',
                 zIndex: STACK_DEPTH - offset,
               }}
             >

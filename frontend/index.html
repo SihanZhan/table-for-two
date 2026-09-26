@@ -14,9 +14,27 @@
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         background: #FAF8F5;
         -webkit-font-smoothing: antialiased;
+        -webkit-tap-highlight-color: transparent;
       }
       button { font-family: inherit; }
-      input { font-family: inherit; }
+      input, select { font-family: inherit; }
+
+      .btn-primary, .btn-ghost, .icon-btn, .filters-toggle {
+        transition: filter 150ms ease, background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+      }
+      .btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+      .btn-primary:active:not(:disabled) { filter: brightness(0.94); }
+      .btn-ghost:hover:not(:disabled) { background: #F5F2EE; border-color: #D6CFC5; }
+      .icon-btn:hover:not(:disabled) { background: #F5F2EE; border-color: #D6CFC5; color: #4B4B4B; }
+      .filters-toggle:hover { opacity: 0.75; }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
     </style>
   </head>
   <body>

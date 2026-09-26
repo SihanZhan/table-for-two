@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, Match } from '../api/client'
+import Spinner from '../components/Spinner'
+import { ClockIcon, EmptyPlateIcon, PartyIcon } from '../components/icons'
 
 const BRAND = '#E8472A'
 
@@ -36,7 +38,7 @@ export default function Results() {
     return (
       <div style={s.center}>
         <div style={{ textAlign: 'center', maxWidth: 300 }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
+          <ClockIcon size={40} style={{ color: '#C4BAB1', marginBottom: '1rem' }} />
           <h2 style={{ margin: '0 0 0.5rem', fontWeight: 700, color: '#1C1C1E' }}>
             Waiting for your partner…
           </h2>
@@ -53,12 +55,12 @@ export default function Results() {
     return (
       <div style={s.center}>
         <div style={{ textAlign: 'center', maxWidth: 300 }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>😬</div>
+          <EmptyPlateIcon size={40} style={{ color: '#C4BAB1', marginBottom: '1rem' }} />
           <h2 style={{ margin: '0 0 0.5rem', fontWeight: 700, color: '#1C1C1E' }}>No matches this time</h2>
           <p style={{ margin: '0 0 1.5rem', color: '#9CA3AF', lineHeight: 1.6 }}>
             Looks like you two have very different tastes — or you both passed on everything. Try again!
           </p>
-          <button style={s.btn} onClick={() => navigate('/')}>Start a new session</button>
+          <button className="btn-primary" style={s.btn} onClick={() => navigate('/')}>Start a new session</button>
         </div>
       </div>
     )
@@ -67,7 +69,7 @@ export default function Results() {
   return (
     <div style={s.page}>
       <div style={s.header}>
-        <div style={{ fontSize: '2.5rem' }}>🎉</div>
+        <PartyIcon size={36} style={{ color: BRAND }} />
         <h1 style={s.title}>You both said yes!</h1>
         <p style={s.sub}>
           {matches.length === 1
@@ -82,7 +84,7 @@ export default function Results() {
         ))}
       </div>
 
-      <button style={s.btn} onClick={() => navigate('/')}>Start a new session</button>
+      <button className="btn-primary" style={s.btn} onClick={() => navigate('/')}>Start a new session</button>
     </div>
   )
 }
@@ -110,27 +112,6 @@ function MatchCard({ match: m }: { match: Match }) {
       </div>
     </div>
   )
-}
-
-function Spinner({ style }: { style?: React.CSSProperties }) {
-  return (
-    <div style={{
-      width: 24, height: 24, borderRadius: '50%',
-      border: `3px solid #F3F4F6`,
-      borderTopColor: BRAND,
-      animation: 'spin 0.8s linear infinite',
-      margin: '0 auto',
-      ...style,
-    }} />
-  )
-}
-
-// inject spin keyframe once
-if (typeof document !== 'undefined' && !document.getElementById('spin-style')) {
-  const el = document.createElement('style')
-  el.id = 'spin-style'
-  el.textContent = '@keyframes spin { to { transform: rotate(360deg); } }'
-  document.head.appendChild(el)
 }
 
 const s: Record<string, React.CSSProperties> = {

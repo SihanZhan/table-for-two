@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
+import { ForkKnifeIcon } from '../components/icons'
 
 const BRAND = '#E8472A'
 const CUISINES = [
@@ -57,7 +58,7 @@ export default function Home() {
   return (
     <div style={s.page}>
       <div style={s.hero}>
-        <div style={s.pill}>🍽 Restaurant matching for two</div>
+        <div style={s.pill}><ForkKnifeIcon size={13} style={{ marginRight: 6, verticalAlign: -2 }} />Restaurant matching for two</div>
         <h1 style={s.title}>Stop debating.<br />Start eating.</h1>
         <p style={s.sub}>
           Each of you swipes privately. We surface the places<br />you both said yes to.
@@ -82,7 +83,7 @@ export default function Home() {
           onKeyDown={e => e.key === 'Enter' && handleCreate()}
         />
 
-        <button type="button" style={s.filtersToggle} onClick={() => setShowFilters(v => !v)}>
+        <button type="button" className="filters-toggle" style={s.filtersToggle} onClick={() => setShowFilters(v => !v)}>
           {showFilters ? 'Hide filters' : 'Filters (optional)'}
         </button>
 
@@ -127,6 +128,7 @@ export default function Home() {
 
         {error && <p style={s.error}>{error}</p>}
         <button
+          className="btn-primary"
           style={{ ...s.btn, opacity: !name.trim() || !city.trim() || loading ? 0.5 : 1 }}
           onClick={handleCreate}
           disabled={loading || !name.trim() || !city.trim()}
@@ -134,7 +136,7 @@ export default function Home() {
           {loading ? 'Finding restaurants…' : 'Create a session →'}
         </button>
         <div style={s.divider}><span>or</span></div>
-        <button style={s.ghost} onClick={() => navigate('/join')}>
+        <button className="btn-ghost" style={s.ghost} onClick={() => navigate('/join')}>
           Join with a code
         </button>
       </div>
